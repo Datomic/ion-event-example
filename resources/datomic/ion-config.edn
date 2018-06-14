@@ -1,0 +1,10 @@
+{:allow [datomic.ion.event-example/event-handler
+         datomic.ion.event-example/slack-event-handler
+         ]            
+ :lambdas {:event-handler
+           {:fn datomic.ion.event-example/event-handler
+            :description "handles AWS AutoScaling events"}
+           :slack-event-handler
+           {:fn datomic.ion.event-example/slack-event-handler
+            :description "handles Slack events"}}
+ :app-name "stu-8"}

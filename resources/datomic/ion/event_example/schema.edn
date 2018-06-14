@@ -1,0 +1,42 @@
+{:slack/config [{:db/cardinality :db.cardinality/one
+                 :db/ident :slack/bot-token
+                 :db/valueType :db.type/string
+                 :db/doc "Bot User Oauth Access token."
+                 :db/noHistory true}
+                {:db/cardinality :db.cardinality/one
+                 :db/ident :slack/channel
+                 :db/valueType :db.type/string
+                 :db/unique :db.unique/identity
+                 :db/noHistory true}
+                {:db/cardinality :db.cardinality/one
+                 :db/ident :slack/verification-token
+                 :db/doc "Token placed in API calls from slack."
+                 :db/valueType :db.type/string
+                 :db/noHistory true}
+                {:db/ident :slack/config}]
+ :deploy/id [{:db/cardinality :db.cardinality/one
+              :db/ident :deploy/id
+              :db/valueType :db.type/string}
+             {:db/cardinality :db.cardinality/one
+              :db/ident :deploy/region
+              :db/valueType :db.type/keyword}
+             {:db/cardinality :db.cardinality/one
+              :db/ident :deploy/state
+              :db/valueType :db.type/keyword}
+             {:db/cardinality :db.cardinality/one
+              :db/ident :deploy/time
+              :db/valueType :db.type/instant}
+             {:db/cardinality :db.cardinality/one
+              :db/ident :deploy/application
+              :db/valueType :db.type/ref}
+             {:db/cardinality :db.cardinality/one
+              :db/ident :deploy/group
+              :db/valueType :db.type/ref}
+             {:db/cardinality :db.cardinality/one
+              :db/ident :group/name
+              :db/unique :db.unique/identity
+              :db/valueType :db.type/string}
+             {:db/cardinality :db.cardinality/one
+              :db/ident :application/name
+              :db/unique :db.unique/identity
+              :db/valueType :db.type/string}]}

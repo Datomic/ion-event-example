@@ -1,0 +1,24 @@
+{
+  "account": "123456789012",
+  "region": "us-east-1",
+  "detail": {
+    "instanceId": "i-0044aa605947996ad",
+    "region": "us-east-1",
+    "deploymentId": "d-0BNTGS3DK",
+    "application": "myApplication",
+    "state": "READY",
+    "deploymentGroup": "DemoFleet2",
+    "instanceGroupId": "30e07b86-7322-499a-a0e3-b44d91cf0d6f"
+  },
+  "detail-type": "CodeDeploy Instance State-change Notification",
+  "source": "aws.codedeploy",
+  "version": "0",
+  "time": "2017-01-25T18:44:53Z",
+  "id": "77828c09-a9ba-453a-8c84-e89e991a05a0",
+  "resources": [
+    "arn:aws:codedeploy:us-east-1:123456789012:deploymentgroup:DemoApplication/DemoFleet2",
+    "arn:aws:ec2:us-east-1:123456789012:instance/i-00470a60594f896ad",
+    "arn:aws:codedeploy:us-east-1:123456789012:application:DemoApplication"
+  ]
+}
+
