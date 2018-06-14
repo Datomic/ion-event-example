@@ -15,6 +15,7 @@
 
 
 (ns datomic.ion.event-example
+  (:import [java.nio ByteBuffer])
   (:require
    [clojure.core.async :refer (<!!)]
    [clojure.data.json :as json]
@@ -81,25 +82,30 @@
 ;; For the full Slack API in Clojure see e.g.
 ;; https://github.com/julienXX/clj-slack
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn make-query-string
-  [m]
-  (->> m
-       (map (fn [[k v]] (str (name k) "=" (java.net.URLEncoder/encode v))))
-       (str/join "&")))
+(defn ->bbuf [^String s] (-> s .getBytes ByteBuffer/wrap))
+(defn ->str
+  [^ByteBuffer bb]
+  (let [n (.remaining bb)
+        bs (byte-array n)]
+    (.get bb bs)
+    (String. bs)))
+
 (defn post-slack-message [channel text]
   (let [token (get-config (d/db (get-conn)) :slack/bot-token)
         conn {:api-url "https://slack.com/api" :token token}
         result (<!! (http/submit (get-http-client)
                                  {:server-name "slack.com"
                                   :server-port 443
-                                  :headers {"content-type" "application/x-www-form-urlencoded"}
+                                  :headers {"content-type" "application/json"
+                                            "authorization" (str "Bearer " token)}
                                   :uri "/api/chat.postMessage"
-                                  :query-string (make-query-string {:channel channel
-                                                                    :text text
-                                                                    :token token})
+                                  :body (-> {:channel channel
+                                             :text text}
+                                            json/write-str
+                                            ->bbuf)
                                   :request-method :post
                                   :scheme :https}))]
-    (update result :body #(when % (-> % .array String.)))))
+    (update result :body #(when % (->str %)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Convert from AWS event format JSON to information, and pluck
@@ -185,8 +191,9 @@ info into the database, and posts a notification in Slack."
   (java.util.Date. (- (System/currentTimeMillis) (* h 60 60 1000))))
 
 (defn recent-deploys
-  "Return CodeDeploy deploys that have happenend since 'since'."
-  [db since]
+  "Return last n CodeDeploy deploys that have happenend since
+'since'."
+  [db since n]
   (->> (d/q '[:find (pull ?e [*
                               {:deploy/application [:application/name]}
                               {:deploy/group [:group/name]}])
@@ -197,7 +204,8 @@ info into the database, and posts a notification in Slack."
             db
             since)
        (map first)
-       (sort-by (fn [{:keys [:deploy/time]}] time))))
+       (sort-by (fn [{:keys [:deploy/time]}] (- (.getTime time))))
+       (take n)))
 
 (defn tableize-deploys
   ""
@@ -214,7 +222,7 @@ info into the database, and posts a notification in Slack."
 (defn deploys-table
   ""
   []
-  (let [deploys (recent-deploys (d/db (get-conn)) (hours-ago 3))]
+  (let [deploys (recent-deploys (d/db (get-conn)) (hours-ago 3) 10)]
     (if (seq deploys)
       (-> deploys tableize-deploys code-block)
       (code-block "no recent deploys"))))

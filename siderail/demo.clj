@@ -33,7 +33,7 @@
 (ev/event-handler {:input cd-failure})
 
 ;; test the query
-(ev/recent-deploys db (ev/hours-ago 24))
+(ev/recent-deploys db (ev/hours-ago 24) 10)
 
 ;; test the code formatting
 (ev/tableize-deploys *1)
