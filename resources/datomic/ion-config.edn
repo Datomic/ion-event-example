@@ -1,10 +1,16 @@
 {:allow [datomic.ion.event-example/event-handler
          datomic.ion.event-example/slack-event-handler
          ]            
- :lambdas {:event-handler
+ :lambdas {;; responds to CloudWatch events via AWS Lambda
+           ;; See https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/WhatIsCloudWatchEvents.html
+           :event-handler
            {:fn datomic.ion.event-example/event-handler
-            :description "handles AWS AutoScaling events"}
+            :description "Handles AWS AutoScaling events"}
+           ;; responds to Slack events via API Gateway
+           ;; See https://api.slack.com/events-api
            :slack-event-handler
            {:fn datomic.ion.event-example/slack-event-handler
+            :integration :api-gateway/proxy
             :description "handles Slack events"}}
+ ;; change this to your app name if playing at home!
  :app-name "stu-8"}
