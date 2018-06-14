@@ -43,6 +43,5 @@
 (ev/slack-event-handler* {:body (sstream "{}")})
 
 ;; test handling a verified slack-event
-(defn sstream [^String s] (java.io.ByteArrayInputStream. (.getBytes s)))
 (let [json (format "{\"token\": \"%s\"}" (ev/get-config db :slack/verification-token))]
   (ev/slack-event-handler* {:body (sstream json)}))

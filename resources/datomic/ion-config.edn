@@ -1,4 +1,5 @@
-{:allow [datomic.ion.event-example/event-handler
+{:allow [;; whitelist of functions that can be invoked as ions
+         datomic.ion.event-example/event-handler
          datomic.ion.event-example/slack-event-handler
          ]            
  :lambdas {;; responds to CloudWatch events via AWS Lambda

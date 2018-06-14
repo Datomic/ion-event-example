@@ -228,7 +228,6 @@ an org-mode table of recent deploys."
         slack-channel (get-config db :slack/channel)
         verified? (= (get json :token)
                      (get-config db :slack/verification-token))]
-    ;; challenge outside of verification
     (if verified?
       (if-let [challenge (get json :challenge)]
         {:status 200 :headers {} :body challenge}
