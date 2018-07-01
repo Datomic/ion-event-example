@@ -14,4 +14,8 @@ The code is heavily commented:
 * [Ion Configuration](https://github.com/Datomic/ion-event-example/blob/master/resources/datomic/ion-config.edn)
 * [Project Configuration](https://github.com/Datomic/ion-event-example/blob/master/deps.edn)
 
+To learn more, watch the video!
+
+[![IMAGE ALT TEXT](https://img.youtube.com/vi/3BRO-Xb32Ic/0.jpg)](http://www.youtube.com/watch?v=3BRO-Xb32Ic "Datomic Ions")
+
 
