@@ -18,8 +18,11 @@
  '[clojure.data.json :as json]
  '[clojure.java.io :as io]
  '[clojure.pprint :as pp]
+ '[datomic.ion.cast :as cast]
  '[datomic.ion.event-example :as ev]
  '[datomic.client.api :as d])
+
+(cast/initialize-redirect :stdout)
 
 (def conn (ev/get-conn))
 (def db (d/db conn))

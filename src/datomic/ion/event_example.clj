@@ -26,6 +26,7 @@
    [clojure.string :as str]
    [cognitect.http-client :as http]
    [datomic.client.api :as d]
+   [datomic.ion.cast :as cast]
    [datomic.ion.lambda.api-gateway :as apigw]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -91,6 +92,7 @@
     (String. bs)))
 
 (defn post-slack-message [channel text]
+  (cast/dev {:msg "PostingToSlack" ::channel channel ::text text})
   (let [token (get-config (d/db (get-conn)) :slack/bot-token)
         conn {:api-url "https://slack.com/api" :token token}
         result (<!! (http/submit (get-http-client)
@@ -172,6 +174,8 @@ that the event referenaces"
   "Ion that responds to AWS CodeDeploy events. Transacts event
 info into the database, and posts a notification in Slack."
   [{:keys [input]}]
+  (cast/event {:msg "CodeDeployEvent" ::json input})
+  (cast/metric {:name :CodeDeployEvent :value 1 :units :count})
   (let [conn (get-conn)
         data (->> input
                   (event->tx code-deploy-event-rules)
@@ -231,16 +235,19 @@ info into the database, and posts a notification in Slack."
   "Web service ion that responds to slack notifications by printing
 an org-mode table of recent deploys."
   [{:keys [headers body]}]
-  (let [json (-> body io/reader (json/read :key-fn keyword))
-        db (d/db (get-conn))
-        slack-channel (get-config db :slack/channel)
-        verified? (= (get json :token)
-                     (get-config db :slack/verification-token))]
-    (if verified?
-      (if-let [challenge (get json :challenge)]
-        {:status 200 :headers {} :body challenge}
-        (let [posted (post-slack-message slack-channel (deploys-table))]
-          {:status 200 :headers {}}))
-      {:status 503 :headers {}})))
+  (try
+   (let [json (-> body io/reader (json/read :key-fn keyword))
+         db (d/db (get-conn))
+         slack-channel (get-config db :slack/channel)
+         verified? (= (get json :token)
+                      (get-config db :slack/verification-token))]
+     (if verified?
+       (if-let [challenge (get json :challenge)]
+         {:status 200 :headers {} :body challenge}
+         (let [posted (post-slack-message slack-channel (deploys-table))]
+           {:status 200 :headers {}}))
+       {:status 503 :headers {}}))
+   (catch Throwable t
+     (cast/alert {:msg "SlackHandlerFailed" :ex t}))))
 
 (def slack-event-handler (apigw/ionize slack-event-handler*))
