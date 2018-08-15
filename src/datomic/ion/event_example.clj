@@ -26,8 +26,30 @@
    [clojure.string :as str]
    [cognitect.http-client :as http]
    [datomic.client.api :as d]
+   [datomic.ion :as ion]
    [datomic.ion.cast :as cast]
    [datomic.ion.lambda.api-gateway :as apigw]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; App params
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn fail
+  [k]
+  (throw (RuntimeException. (str "Unable to get a value for " k ", see https://docs.datomic.com/cloud/ions/ions-reference.html#parameters."))))
+
+(def get-params
+  "Returns the SSM params under /datomic-shared/(env)/(app-name)/, where
+
+env       value of get-env :env
+app-name  value of get-app-info :app-name"
+  (memoize
+   #(let [app (or (get (ion/get-app-info) :app-name) (fail :app-name))
+          env (or (get (ion/get-env) :env) (fail :env))]
+      (ion/get-params {:path (str "/datomic-shard/" (name env) "/" app "/")}))))
+
+(defn get-param
+  [k]
+  (or (get (get-params) k) (fail k)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Get a connection. Note the :server-type :ion, see also
@@ -42,8 +64,7 @@
               :endpoint "http://entry.stu-8.us-east-1.datomic.net:8182/"
               :proxy-port 8182})))
 (def get-http-client (memoize #(http/create {})))
-(def db-name "ion-event-example")
-(def get-conn (memoize #(d/connect (get-client) {:db-name db-name})))
+(def get-conn (memoize #(d/connect (get-client) {:db-name (get-param "db-name")})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Create the example database. Note that the schema data is keyed
@@ -57,25 +78,12 @@
 (defn ident-exists? [db ident] (not (empty? (d/pull db '[:db/ident] ident))))
 (defn create-example-database []
   (let [client (get-client)]
-    (d/create-database client {:db-name db-name})
-    (let [conn (d/connect client {:db-name db-name})]
+    (d/create-database client {:db-name (get-param "db-name")})
+    (let [conn (d/connect client {:db-name (get-param "db-name")})]
       (doseq [[id tx-data] (schemas)]
         (when-not (ident-exists? (d/db conn) id)
           (d/transact conn {:tx-data tx-data})))
       conn)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Store slack config under a :slack/config ident in the database.
-;; For real apps consider e.g. Parameter Store:
-;; See https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn set-config [conn m]
-  (d/transact conn {:tx-data [(assoc m :db/ident :slack/config)]}))
-
-;; All queries and pulls run in memory, so this is not an RPC call
-;; that you might worry about caching or optmizing away.
-(defn get-config [db k]
-  (some-> (d/pull db [k] :slack/config) k))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HTTP post to slack. I needed only to make only a single call
@@ -93,7 +101,7 @@
 
 (defn post-slack-message [channel text]
   (cast/dev {:msg "PostingToSlack" ::channel channel ::text text})
-  (let [token (get-config (d/db (get-conn)) :slack/bot-token)
+  (let [token (get-param "bot-token")
         conn {:api-url "https://slack.com/api" :token token}
         result (<!! (http/submit (get-http-client)
                                  {:server-name "slack.com"
@@ -180,7 +188,7 @@ info into the database, and posts a notification in Slack."
         data (->> input
                   (event->tx code-deploy-event-rules)
                   (add-refs code-deploy-event-refs))
-        slack-channel (get-config (d/db conn) :slack/channel)]
+        slack-channel (get-param "channel")]
     (d/transact conn {:tx-data data})
     (post-slack-message slack-channel (-> data pr-str code-block))
     "handled"))
@@ -238,9 +246,9 @@ an org-mode table of recent deploys."
   (try
    (let [json (-> body io/reader (json/read :key-fn keyword))
          db (d/db (get-conn))
-         slack-channel (get-config db :slack/channel)
+         slack-channel (get-param "channel")
          verified? (= (get json :token)
-                      (get-config db :slack/verification-token))]
+                      (get-param "verification-token"))]
      (if verified?
        (if-let [challenge (get json :challenge)]
          {:status 200 :headers {} :body challenge}

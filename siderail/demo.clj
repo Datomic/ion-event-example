@@ -18,15 +18,16 @@
  '[clojure.data.json :as json]
  '[clojure.java.io :as io]
  '[clojure.pprint :as pp]
+ '[datomic.ion :as ion]
  '[datomic.ion.cast :as cast]
  '[datomic.ion.event-example :as ev]
  '[datomic.client.api :as d])
 
 (cast/initialize-redirect :stdout)
 
+@(def channel (ev/get-param "channel"))
 (def conn (ev/get-conn))
 (def db (d/db conn))
-@(def channel (ev/get-config db :slack/channel))
 
 ;; test writing to slack channel
 (ev/post-slack-message channel "hi")
@@ -46,5 +47,5 @@
 (ev/slack-event-handler* {:body (sstream "{}")})
 
 ;; test handling a verified slack-event
-(let [json (format "{\"token\": \"%s\"}" (ev/get-config db :slack/verification-token))]
+(let [json (format "{\"token\": \"%s\"}" (ev/get-param "verification-token"))]
   (ev/slack-event-handler* {:body (sstream json)}))
