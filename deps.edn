@@ -19,7 +19,7 @@
    {
     ;; The client-cloud library is a dev-time only dep
     ;; so that you can test interactively from a REPL.
-    com.datomic/client-cloud {:mvn/version "0.8.56"}
+    com.datomic/client-cloud {:mvn/version "0.8.63"}
 
     ;; The ion-dev tooling implements the :push and
     ;; :deploy commands and is needed only at dev time.
