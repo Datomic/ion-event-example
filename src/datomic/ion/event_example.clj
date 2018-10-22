@@ -45,7 +45,7 @@ app-name  value of get-app-info :app-name"
   (memoize
    #(let [app (or (get (ion/get-app-info) :app-name) (fail :app-name))
           env (or (get (ion/get-env) :env) (fail :env))]
-      (ion/get-params {:path (str "/datomic-shard/" (name env) "/" app "/")}))))
+      (ion/get-params {:path (str "/datomic-shared/" (name env) "/" app "/")}))))
 
 (defn get-param
   [k]
