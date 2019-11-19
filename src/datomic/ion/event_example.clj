@@ -213,8 +213,7 @@ info into the database, and posts a notification in Slack."
   (let [conn (get-conn)
         data (->> input
                   (event->tx code-deploy-event-rules)
-                  (add-refs code-deploy-event-refs))
-        slack-channel (get-param "channel")]
+                  (add-refs code-deploy-event-refs))]
     (d/transact conn {:tx-data data})
     (post-slack-message-to-webhook-url (-> data pr-str code-block))
     "handled"))
