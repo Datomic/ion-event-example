@@ -13,17 +13,7 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(require
- '[clojure.core.async :as a]
- '[clojure.data.json :as json]
- '[clojure.java.io :as io]
- '[clojure.pprint :as pp]
- '[datomic.ion :as ion]
- '[datomic.ion.cast :as cast]
- '[datomic.ion.event-example :as ev]
- '[datomic.client.api :as d])
-
-(cast/initialize-redirect :stdout)
+(load-file "siderail/user.repl")
 
 @(def channel (ev/get-param "channel"))
 (def conn (ev/get-conn))

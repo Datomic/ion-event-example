@@ -37,19 +37,31 @@
   [k]
   (throw (RuntimeException. (str "Unable to get a value for " k ", see https://docs.datomic.com/cloud/ions/ions-reference.html#parameters."))))
 
+(defn get-key-from-map!
+  [m k]
+  (or (get m k)
+      (throw (ex-info "Missing key in config-map, see ex-data" {:map m
+                                                                :key k}))))
+
+(defn parameter-path
+  [{:keys [app-name env param]}]
+  (assert app-name)
+  (assert env)
+  (str "/datomic-shared/" (name env) "/" app-name "/" (or param "")))
+
 (def get-params
   "Returns the SSM params under /datomic-shared/(env)/(app-name)/, where
 
 env       value of get-env :env
 app-name  value of get-app-info :app-name"
   (memoize
-   #(let [app (or (get (ion/get-app-info) :app-name) (fail :app-name))
-          env (or (get (ion/get-env) :env) (fail :env))]
-      (ion/get-params {:path (str "/datomic-shared/" (name env) "/" app "/")}))))
+   #(let [app-name (get-key-from-map! (ion/get-app-info) :app-name)
+          env (get-key-from-map! (ion/get-env) :env)]
+      (ion/get-params {:path (parameter-path {:app-name app-name :env env})}))))
 
 (defn get-param
   [k]
-  (or (get (get-params) k) (fail k)))
+  (get-key-from-map! (get-params) k))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Get a connection. Note the :server-type :ion, see also
@@ -99,18 +111,32 @@ app-name  value of get-app-info :app-name"
     (.get bb bs)
     (String. bs)))
 
-(defn post-slack-message [channel text]
-  (cast/dev {:msg "PostingToSlack" ::channel channel ::text text})
-  (let [token (get-param "bot-token")
-        conn {:api-url "https://slack.com/api" :token token}
-        result (<!! (http/submit (get-http-client)
-                                 {:server-name "slack.com"
+;; (defn post-slack-message [channel text]
+;;   (cast/dev {:msg "PostingToSlack" ::channel channel ::text text})
+;;   (let [token (get-param "bot-token")
+;;         conn {:api-url "https://slack.com/api" :token token}
+;;         result (<!! (http/submit (get-http-client)
+;;                                  {:server-name "slack.com"
+;;                                   :server-port 443
+;;                                   :headers {"content-type" "application/json"
+;;                                             "authorization" (str "Bearer " token)}
+;;                                   :uri "/api/chat.postMessage"
+;;                                   :body (-> {:channel channel
+;;                                              :text text}
+;;                                             json/write-str
+;;                                             ->bbuf)
+;;                                   :request-method :post
+;;                                   :scheme :https}))]
+;;     (update result :body #(when % (->str %)))))
+
+;; https://api.slack.com/apps/AQBDNQG8J/incoming-webhooks?
+(defn post-slack-message-to-webhook-url [text]
+  (cast/dev {:msg "PostingToSlack" ::text text})
+  (let [result (<!! (http/submit (get-http-client)
+                                 {:server-name "hooks.slack.com"
                                   :server-port 443
-                                  :headers {"content-type" "application/json"
-                                            "authorization" (str "Bearer " token)}
-                                  :uri "/api/chat.postMessage"
-                                  :body (-> {:channel channel
-                                             :text text}
+                                  :uri (get-param "webhook-uri")
+                                  :body (-> {:text text}
                                             json/write-str
                                             ->bbuf)
                                   :request-method :post
@@ -190,7 +216,7 @@ info into the database, and posts a notification in Slack."
                   (add-refs code-deploy-event-refs))
         slack-channel (get-param "channel")]
     (d/transact conn {:tx-data data})
-    (post-slack-message slack-channel (-> data pr-str code-block))
+    (post-slack-message-to-webhook-url (-> data pr-str code-block))
     "handled"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -246,13 +272,12 @@ an org-mode table of recent deploys."
   (try
    (let [json (-> body io/reader (json/read :key-fn keyword))
          db (d/db (get-conn))
-         slack-channel (get-param "channel")
          verified? (= (get json :token)
                       (get-param "verification-token"))]
      (if verified?
        (if-let [challenge (get json :challenge)]
          {:status 200 :headers {} :body challenge}
-         (let [posted (post-slack-message slack-channel (deploys-table))]
+         (let [posted (post-slack-message-to-webhook-url (deploys-table))]
            {:status 200 :headers {}}))
        {:status 503 :headers {}}))
    (catch Throwable t
