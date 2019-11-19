@@ -88,14 +88,11 @@ app-name  value of get-app-info :app-name"
   []
   (-> "datomic/ion/event_example/schema.edn" io/resource slurp edn/read-string))
 (defn ident-exists? [db ident] (not (empty? (d/pull db '[:db/ident] ident))))
-(defn create-example-database []
-  (let [client (get-client)]
-    (d/create-database client {:db-name (get-param "db-name")})
-    (let [conn (d/connect client {:db-name (get-param "db-name")})]
-      (doseq [[id tx-data] (schemas)]
-        (when-not (ident-exists? (d/db conn) id)
-          (d/transact conn {:tx-data tx-data})))
-      conn)))
+(defn ensure-schema
+  [conn]
+  (doseq [[id tx-data] (schemas)]
+    (when-not (ident-exists? (d/db conn) id)
+      (d/transact conn {:tx-data tx-data}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HTTP post to slack. I needed only to make only a single call
