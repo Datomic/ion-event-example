@@ -9,9 +9,9 @@
         ;; AWS, e.g. the ionize function to convert a Ring-like
         ;; web function so that it implements the contract expected
         ;; by AWS API Gateway.
-        com.datomic/ion {:mvn/version "0.9.26"}
+        com.datomic/ion {:mvn/version "0.9.35"}
         org.clojure/data.json {:mvn/version "0.2.6"}
-        org.clojure/clojure {:mvn/version "1.9.0"}}
+        org.clojure/clojure {:mvn/version "1.10.0"}}
  :mvn/repos {"datomic-cloud" {:url "s3://datomic-releases-1fc2183a/maven/releases"}}
  :aliases
  {:dev
@@ -19,9 +19,9 @@
    {
     ;; The client-cloud library is a dev-time only dep
     ;; so that you can test interactively from a REPL.
-    com.datomic/client-cloud {:mvn/version "0.8.63"}
+    com.datomic/client-cloud {:mvn/version "0.8.81"}
 
     ;; The ion-dev tooling implements the :push and
     ;; :deploy commands and is needed only at dev time.
-    com.datomic/ion-dev {:mvn/version "0.9.176"}}}}}
+    com.datomic/ion-dev {:mvn/version "0.9.247"}}}}}
 
