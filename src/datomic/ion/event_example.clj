@@ -60,9 +60,8 @@ app-name  value of get-app-info :app-name"
              {:server-type :ion
               :region "us-east-1"
               :system "stu-8"
-              :query-group "stu-8"
-              :endpoint "http://entry.stu-8.us-east-1.datomic.net:8182/"
-              :proxy-port 8182})))
+              ;supply ClientApiGatewayEndpoint from your QG
+              :endpoint "https://n5ajhj3cma.execute-api.us-east-1.amazonaws.com"})))
 (def get-http-client (memoize #(http/create {})))
 (def get-conn (memoize #(d/connect (get-client) {:db-name (get-param "db-name")})))
 
